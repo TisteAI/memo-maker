@@ -1,0 +1,35 @@
+{
+  "name": "memo-maker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Meeting memo generation application with AI-powered transcription",
+  "workspaces": [
+    "backend",
+    "frontend-web",
+    "mobile"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:*",
+    "dev:backend": "npm run dev -w backend",
+    "dev:web": "npm run dev -w frontend-web",
+    "test": "npm run test --workspaces",
+    "test:backend": "npm run test -w backend",
+    "test:web": "npm run test -w frontend-web",
+    "lint": "npm run lint --workspaces",
+    "type-check": "npm run type-check --workspaces",
+    "build": "npm run build --workspaces",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "setup": "npm install && npm run docker:up && npm run db:migrate -w backend"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
