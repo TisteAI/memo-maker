@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MemoStatus {
+  UPLOADING
+  TRANSCRIBING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String?
+  role          Role     @default(USER)
+
+  subscription  Subscription?
+  memos         Memo[]
+  refreshTokens RefreshToken[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Subscription {
+  id                String           @id @default(cuid())
+  userId            String           @unique
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tier              SubscriptionTier @default(FREE)
+  stripeCustomerId  String?          @unique
+  stripeSubscriptionId String?       @unique
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean         @default(false)
+
+  monthlyMinutes    Int              @default(0)
+  minutesUsed       Int              @default(0)
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId])
+}
+
+model Memo {
+  id                String     @id @default(cuid())
+  userId            String
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title             String
+  date              DateTime   @default(now())
+  duration          Int?       // Duration in seconds
+  participants      Json       @default("[]")
+
+  audioUrl          String?
+  audioStorageKey   String?    // S3 key
+  audioRetentionDate DateTime?
+
+  transcript        Transcript?
+  memoContent       Json?      // Structured memo content
+
+  status            MemoStatus @default(UPLOADING)
+  errorMessage      String?
+
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([userId, date(sort: Desc)])
+  @@index([userId, status])
+  @@index([audioRetentionDate])
+}
+
+model Transcript {
+  id         String   @id @default(cuid())
+  memoId     String   @unique
+  memo       Memo     @relation(fields: [memoId], references: [id], onDelete: Cascade)
+
+  text       String   @db.Text
+  segments   Json     // Whisper segments with timestamps
+  language   String   @default("en")
+  confidence Float?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([memoId])
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  jobId       String   @unique  // BullMQ job ID
+  queueName   String
+  status      String
+  data        Json
+  result      Json?
+  error       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([jobId])
+  @@index([queueName, status])
+}
