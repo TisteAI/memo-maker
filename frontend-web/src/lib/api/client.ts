@@ -106,9 +106,11 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async register(data: RegisterRequest): Promise<{ user: AuthTokens['user'] }> {
-    const response = await this.client.post('/api/auth/register', data);
-    return response.data;
+  async register(data: RegisterRequest): Promise<AuthTokens> {
+    const response = await this.client.post<AuthTokens>('/api/auth/register', data);
+    const tokens = response.data;
+    this.setTokens(tokens.accessToken, tokens.refreshToken);
+    return tokens;
   }
 
   async login(data: LoginRequest): Promise<AuthTokens> {
