@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:worker": "node dist/worker.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run --grep 'unit'",
@@ -20,9 +22,12 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.478.0",
+    "@aws-sdk/s3-request-presigner": "^3.478.0",
     "@fastify/cors": "^8.5.0",
     "@fastify/helmet": "^11.1.1",
     "@fastify/jwt": "^7.2.3",
+    "@fastify/multipart": "^8.1.0",
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/websocket": "^10.0.0",
     "@prisma/client": "^5.7.1",
