@@ -12,6 +12,13 @@ AI-powered meeting memo generation application that records conversations, trans
 - ☁️ Cloud storage for audio files
 - 📊 Usage tracking and subscription management
 
+## Documentation
+
+- 📖 **[User Guide](docs/USER_GUIDE.md)** - Complete guide for end users
+- 🏗️ **[Architecture](docs/ARCHITECTURE.md)** - System design and technical architecture
+- 🔌 **[API Reference](docs/API.md)** - Complete API documentation
+- 🚀 **[Deployment](DEPLOYMENT.md)** - Production deployment guide
+
 ## Architecture
 
 ### Tech Stack
@@ -172,20 +179,31 @@ This project follows **Test-Driven Development (TDD)** methodology:
 - Vitest (unit & integration tests)
 - Testcontainers (real PostgreSQL/Redis in backend tests)
 - React Testing Library (component tests)
-- Playwright (E2E tests - planned)
-- Promptfoo (LLM evaluation - planned)
+- Playwright (E2E tests across 5 browsers)
+- Promptfoo (LLM evaluation and prompt testing)
 
 **Current Test Coverage:**
 - ✅ Backend: 55+ tests covering auth, memos, AI services
-- ✅ Frontend: 47 tests covering UI components and integration
+- ✅ Frontend: 47 unit/component tests
+- ✅ E2E: 39 tests covering complete user flows
+- ✅ AI Quality: 6 Promptfoo test scenarios
 - ✅ CI/CD: Automated testing on every PR
 
 **Running tests:**
 ```bash
+# Backend tests
 npm run test:watch -w backend   # Watch mode
 npm run test:unit -w backend    # Unit tests only
 npm run test:integration        # Integration tests
 npm run test:coverage           # Generate coverage report
+
+# Frontend tests
+npm run test -w frontend-web    # Unit/component tests
+npm run test:e2e -w frontend-web # E2E tests (Playwright)
+
+# AI quality tests
+npm run ai:test -w backend      # Run Promptfoo tests
+npm run ai:test:ui -w backend   # Interactive UI
 ```
 
 ## API Documentation
