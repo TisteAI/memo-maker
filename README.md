@@ -56,10 +56,16 @@ memo-maker/
 │   └── package.json
 │
 ├── frontend-web/        # Next.js web application
-│   └── (coming soon)
+│   ├── src/
+│   │   ├── app/         # Next.js 14 App Router pages
+│   │   ├── components/  # Reusable UI components
+│   │   ├── contexts/    # React contexts (Auth, etc.)
+│   │   ├── lib/         # API client, utilities
+│   │   └── tests/       # Test utilities & setup
+│   └── package.json
 │
 ├── mobile/              # React Native mobile app
-│   └── (coming soon)
+│   └── (planned)
 │
 ├── docker-compose.yml   # Local development services
 └── package.json         # Monorepo root
@@ -108,7 +114,13 @@ memo-maker/
    npm run dev:backend
    ```
 
+7. **Start the frontend (in a new terminal):**
+   ```bash
+   npm run dev:frontend
+   ```
+
 The API will be available at `http://localhost:3000`
+The web app will be available at `http://localhost:3001`
 
 ### Development Workflow
 
@@ -128,6 +140,7 @@ npm run dev:worker -w backend
 ```bash
 npm test                    # All workspaces
 npm run test:backend        # Backend only
+npm run test:frontend       # Frontend only
 npm run test:coverage       # With coverage report
 ```
 
@@ -151,15 +164,21 @@ This project follows **Test-Driven Development (TDD)** methodology:
 - ✅ Tests MUST be written BEFORE implementation
 - ✅ Red-Green-Refactor cycle mandatory
 - ✅ Coverage requirements:
-  - Backend: 80% overall
-  - Frontend: 70% overall
+  - Backend: 80% overall (55+ tests)
+  - Frontend: 70% overall (47+ tests)
   - Security-critical code: 100% (auth, payments)
 
 **Test Stack:**
 - Vitest (unit & integration tests)
-- Testcontainers (real PostgreSQL/Redis in tests)
-- Playwright (E2E tests)
-- Promptfoo (LLM evaluation)
+- Testcontainers (real PostgreSQL/Redis in backend tests)
+- React Testing Library (component tests)
+- Playwright (E2E tests - planned)
+- Promptfoo (LLM evaluation - planned)
+
+**Current Test Coverage:**
+- ✅ Backend: 55+ tests covering auth, memos, AI services
+- ✅ Frontend: 47 tests covering UI components and integration
+- ✅ CI/CD: Automated testing on every PR
 
 **Running tests:**
 ```bash
@@ -362,6 +381,15 @@ See `backend/prisma/schema.prisma` for full schema.
 
 **Self-hosting Whisper becomes cost-effective at ~$20k/month API costs**
 
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for comprehensive deployment instructions including:
+- Railway backend deployment
+- Vercel frontend deployment
+- Environment configuration
+- CI/CD setup with GitHub Actions
+- Monitoring and scaling strategies
+
 ## Contributing
 
 1. Follow TDD methodology (tests before code)
@@ -369,6 +397,8 @@ See `backend/prisma/schema.prisma` for full schema.
 3. Run linting and type-checking before commits
 4. Write clear commit messages
 5. Update documentation for new features
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 ## License
 
