@@ -1,0 +1,320 @@
+# Promptfoo Configuration for Memo Maker AI Quality Testing
+# This configuration tests the memo generation prompts against various scenarios
+
+description: 'Memo Generation AI Quality Tests'
+
+# Define the prompts to test
+prompts:
+  - label: 'memo-generation-system-prompt'
+    raw: |
+      You are an AI assistant that generates structured meeting memos from transcripts.
+
+      Your task is to analyze the transcript and create a comprehensive memo with:
+      1. A concise summary (2-3 sentences)
+      2. Key points discussed (bullet points)
+      3. Action items with owners and due dates when mentioned
+      4. Decisions made
+      5. Next steps or follow-ups
+      6. Attendees mentioned in the conversation
+
+      Extract information accurately from the transcript. If certain information (like due dates or owners) is not mentioned, omit those fields.
+
+      Respond with valid JSON matching the schema.
+
+  - label: 'memo-generation-with-metadata'
+    raw: |
+      You are an AI assistant that generates structured meeting memos from transcripts.
+
+      Your task is to analyze the transcript and create a comprehensive memo with:
+      1. A concise summary (2-3 sentences)
+      2. Key points discussed (bullet points)
+      3. Action items with owners and due dates when mentioned
+      4. Decisions made
+      5. Next steps or follow-ups
+      6. Attendees mentioned in the conversation
+
+      Extract information accurately from the transcript. If certain information (like due dates or owners) is not mentioned, omit those fields.
+
+      Respond with valid JSON matching the schema.
+
+      Meeting Title: {{title}}
+      Date: {{date}}
+      Expected Participants: {{participants}}
+
+# Define the providers (LLM models to test)
+providers:
+  - id: openai:gpt-4o-mini
+    config:
+      temperature: 0.3
+      response_format:
+        type: json_object
+
+  # Optionally test with GPT-4 for comparison
+  - id: openai:gpt-4o
+    config:
+      temperature: 0.3
+      response_format:
+        type: json_object
+
+# Test cases with sample transcripts
+tests:
+  # Test 1: Simple standup meeting
+  - description: 'Simple standup meeting with clear action items'
+    vars:
+      title: 'Daily Standup'
+      date: '2025-01-15'
+      participants: 'Alice, Bob, Charlie'
+      transcript: |
+        Alice: Good morning everyone. Let's start with our daily standup.
+        Bob: I finished the authentication module yesterday. Today I'll be working on the API documentation.
+        Charlie: I completed the database migration. I'm blocked on the S3 integration because I need AWS credentials.
+        Alice: Okay, I'll get you those credentials by end of day, Charlie. Bob, can you review Charlie's PR for the migration?
+        Bob: Sure, I'll review it this afternoon.
+        Alice: Great. I'm working on the frontend today. Meeting adjourned.
+
+    assert:
+      # Validate JSON structure
+      - type: is-json
+
+      # Check required fields exist
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.summary && output.keyPoints && output.actionItems && output.decisions;
+
+      # Validate summary length
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          const sentences = output.summary.split(/[.!?]+/).filter(s => s.trim().length > 0);
+          return sentences.length >= 1 && sentences.length <= 4;
+
+      # Check that action items were extracted
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.actionItems && output.actionItems.length >= 2;
+
+      # Verify attendees were identified
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          if (!output.attendees) return false;
+          const attendees = output.attendees.map(a => a.toLowerCase());
+          return attendees.some(a => a.includes('alice')) &&
+                 attendees.some(a => a.includes('bob')) &&
+                 attendees.some(a => a.includes('charlie'));
+
+  # Test 2: Product planning meeting with decisions
+  - description: 'Product planning meeting with multiple decisions'
+    vars:
+      title: 'Q1 Product Planning'
+      date: '2025-01-10'
+      participants: 'Sarah (PM), Mike (Eng), Lisa (Design)'
+      transcript: |
+        Sarah: Thanks for joining. We need to decide on the Q1 roadmap priorities.
+        Mike: I think we should focus on performance improvements. Users are complaining about slow load times.
+        Lisa: Agreed. From a design perspective, we also need to refresh the onboarding flow. It's outdated.
+        Sarah: Both are important. Let's prioritize performance for Q1 and push onboarding to Q2.
+        Mike: Makes sense. I'll need Lisa's input on the performance metrics dashboard.
+        Lisa: I can have mockups ready by next Friday.
+        Sarah: Perfect. Decision made: Q1 focus is performance, Q2 is onboarding redesign.
+        Mike: I'll create tickets for the performance work.
+        Sarah: And I'll update the roadmap document. Meeting complete.
+
+    assert:
+      - type: is-json
+
+      # Should extract multiple decisions
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.decisions && output.decisions.length >= 1;
+
+      # Should contain roadmap-related content
+      - type: contains-any
+        value:
+          - 'performance'
+          - 'Performance'
+          - 'Q1'
+          - 'roadmap'
+
+      # Should identify next steps
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.nextSteps && output.nextSteps.length >= 1;
+
+  # Test 3: Meeting with no clear action items
+  - description: 'Brainstorming meeting with no concrete action items'
+    vars:
+      title: 'Marketing Brainstorm'
+      date: '2025-01-12'
+      participants: 'Team'
+      transcript: |
+        Person A: I think we should explore social media marketing.
+        Person B: That's interesting. What platforms were you thinking?
+        Person A: Maybe Twitter and LinkedIn for B2B.
+        Person C: We could also look into content marketing.
+        Person B: Yeah, blog posts and case studies.
+        Person A: These are all good ideas. We should meet again next week to discuss further.
+
+    assert:
+      - type: is-json
+
+      # Summary should still be generated
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.summary && output.summary.length > 20;
+
+      # Key points should be extracted even without action items
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.keyPoints && output.keyPoints.length >= 1;
+
+      # Action items might be empty or minimal
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          // Action items array should exist (even if empty or minimal)
+          return Array.isArray(output.actionItems);
+
+  # Test 4: Meeting with explicit due dates
+  - description: 'Meeting with specific due dates and task assignments'
+    vars:
+      title: 'Sprint Planning'
+      date: '2025-01-08'
+      participants: 'Dev Team'
+      transcript: |
+        Manager: Let's assign tasks for this sprint. Sprint ends January 22nd.
+        Developer 1: I'll take the user authentication feature. I can finish it by January 15th.
+        Developer 2: I'll work on the database optimization. Target completion is January 18th.
+        Designer: I'll have the new UI mockups ready by January 12th.
+        Manager: Great. Developer 1, please review Designer's mockups when they're ready.
+        Developer 1: Will do.
+        Manager: Everyone clear on their tasks and deadlines?
+        All: Yes.
+        Manager: Meeting adjourned.
+
+    assert:
+      - type: is-json
+
+      # Should extract action items with due dates
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          if (!output.actionItems) return false;
+          // At least one action item should have a dueDate
+          return output.actionItems.some(item => item.dueDate);
+
+      # Should extract task owners
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          if (!output.actionItems) return false;
+          // At least one action item should have an owner
+          return output.actionItems.some(item => item.owner);
+
+      # Should have multiple action items
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.actionItems && output.actionItems.length >= 3;
+
+  # Test 5: Very short transcript (edge case)
+  - description: 'Very brief meeting transcript'
+    vars:
+      title: 'Quick Sync'
+      date: '2025-01-14'
+      participants: 'John, Mary'
+      transcript: |
+        John: Status update?
+        Mary: Everything on track. No blockers.
+        John: Good. Let's sync again tomorrow.
+
+    assert:
+      - type: is-json
+
+      # Should still generate basic structure
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.summary && output.keyPoints;
+
+      # Summary should be concise
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.summary.length < 200;
+
+  # Test 6: Meeting with technical discussion
+  - description: 'Technical architecture discussion'
+    vars:
+      title: 'Architecture Review'
+      date: '2025-01-11'
+      participants: 'Engineering Team'
+      transcript: |
+        Tech Lead: We need to discuss the API architecture for the new service.
+        Engineer 1: I propose using REST with JSON. It's simple and well-supported.
+        Engineer 2: What about GraphQL? It would give clients more flexibility.
+        Tech Lead: GraphQL adds complexity. Let's stick with REST for now. We can always add GraphQL later if needed.
+        Engineer 1: Agreed. Should we use OpenAPI for documentation?
+        Tech Lead: Yes, let's use OpenAPI 3.0. Engineer 1, can you set up the initial spec?
+        Engineer 1: I'll have it done by next Monday.
+        Tech Lead: Perfect. Decision: REST API with OpenAPI documentation.
+
+    assert:
+      - type: is-json
+
+      # Should extract technical decisions
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          return output.decisions && output.decisions.length >= 1;
+
+      # Should mention REST or API in summary or key points
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          const text = JSON.stringify(output).toLowerCase();
+          return text.includes('rest') || text.includes('api');
+
+      # Should have action item for OpenAPI spec
+      - type: javascript
+        value: |
+          const output = JSON.parse(output);
+          if (!output.actionItems) return false;
+          return output.actionItems.length >= 1;
+
+# Output configuration
+outputPath: ./promptfoo-results.json
+
+# Default assertion configuration
+defaultTest:
+  options:
+    provider: openai:gpt-4o-mini
+
+  # These assertions apply to all tests
+  assert:
+    # All outputs must be valid JSON
+    - type: is-json
+
+    # Output should not be empty
+    - type: javascript
+      value: output && output.length > 0
+
+    # Should not contain error messages
+    - type: not-contains
+      value:
+        - 'error'
+        - 'Error'
+        - 'ERROR'
+        - 'failed'
+        - 'Failed'
+
+# Evaluation settings
+evaluateOptions:
+  maxConcurrency: 2
+  delay: 1000  # 1 second delay between API calls to avoid rate limits

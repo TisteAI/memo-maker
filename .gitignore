@@ -17,6 +17,11 @@ test-results/
 playwright-report/
 .playwright/
 
+# Promptfoo
+.promptfoo/
+promptfoo-results.json
+promptfoo-cache/
+
 # Build outputs
 dist/
 build/
