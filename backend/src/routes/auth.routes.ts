@@ -33,14 +33,13 @@ export async function authRoutes(app: FastifyInstance) {
 
     const user = await authService.register(body);
 
-    return reply.status(201).send({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+    // Automatically log in the user after registration
+    const result = await authService.login({
+      email: body.email,
+      password: body.password,
     });
+
+    return reply.status(201).send(result);
   });
 
   // Login
