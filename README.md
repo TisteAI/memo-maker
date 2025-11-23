@@ -112,10 +112,17 @@ The API will be available at `http://localhost:3000`
 
 ### Development Workflow
 
-**Run all services:**
+**Run API server:**
 ```bash
-npm run dev
+npm run dev:backend
 ```
+
+**Run background workers (in separate terminal):**
+```bash
+npm run dev:worker -w backend
+```
+
+> **Note:** Both the API server and background workers must be running for full functionality. Workers process transcription and memo generation jobs.
 
 **Run tests:**
 ```bash
@@ -220,6 +227,106 @@ Response:
     "email": "user@example.com",
     "name": "John Doe",
     "role": "USER"
+  }
+}
+```
+
+### Memo Endpoints
+
+```
+POST   /api/memos                      - Create new memo
+POST   /api/memos/:id/audio            - Upload audio file
+POST   /api/memos/:id/audio/upload-url - Get presigned upload URL
+GET    /api/memos                      - List user's memos
+GET    /api/memos/:id                  - Get single memo with transcript
+PATCH  /api/memos/:id                  - Update memo
+DELETE /api/memos/:id                  - Delete memo
+GET    /api/memos/:id/audio/download-url - Get audio download URL
+```
+
+### Example: Create Memo and Upload Audio
+
+**Step 1: Create memo**
+```bash
+curl -X POST http://localhost:3000/api/memos \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Team Standup - Dec 15",
+    "participants": ["Alice", "Bob", "Charlie"]
+  }'
+```
+
+Response:
+```json
+{
+  "memo": {
+    "id": "clx...",
+    "title": "Team Standup - Dec 15",
+    "status": "UPLOADING",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "createdAt": "2024-01-15T10:00:00Z"
+  }
+}
+```
+
+**Step 2: Upload audio file**
+```bash
+curl -X POST http://localhost:3000/api/memos/clx.../audio \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -F "file=@meeting-audio.mp3"
+```
+
+Response:
+```json
+{
+  "message": "Audio uploaded successfully. Transcription started.",
+  "audioUrl": "https://s3.amazonaws.com/bucket/memos/clx.../audio.mp3"
+}
+```
+
+**Step 3: Check memo status**
+
+The system automatically:
+1. Transcribes audio using OpenAI Whisper
+2. Generates structured memo using GPT-4
+3. Updates status: UPLOADING → TRANSCRIBING → GENERATING → COMPLETED
+
+```bash
+curl -X GET http://localhost:3000/api/memos/clx... \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Response (when completed):
+```json
+{
+  "memo": {
+    "id": "clx...",
+    "title": "Team Standup - Dec 15",
+    "status": "COMPLETED",
+    "duration": 1200,
+    "memoContent": {
+      "summary": "Team discussed Q1 goals and project deadlines.",
+      "keyPoints": [
+        "Launch date set for March 15th",
+        "Need additional resources for frontend team"
+      ],
+      "actionItems": [
+        {
+          "task": "Hire 2 frontend developers",
+          "owner": "Alice",
+          "dueDate": "2024-02-01",
+          "priority": "high"
+        }
+      ],
+      "decisions": [
+        "Approved budget increase for Q1"
+      ]
+    },
+    "transcript": {
+      "text": "Full transcript text...",
+      "language": "en"
+    }
   }
 }
 ```
