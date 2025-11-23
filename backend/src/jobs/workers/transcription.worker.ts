@@ -10,6 +10,7 @@ import { StorageService } from '../../services/storage.service.js';
 import { TranscriptionService } from '../../services/transcription.service.js';
 import { addMemoGenerationJob } from '../queue.js';
 import { logger } from '../../utils/logger.js';
+import { measureTime } from '../../utils/performance.js';
 import { env } from '../../config/env.js';
 
 const redisConnection = {
@@ -54,9 +55,16 @@ export const transcriptionWorker = new Worker<TranscriptionJobData>(
       logger.info({ memoId, key: memo.audioStorageKey }, 'Downloading audio');
       const audioBuffer = await storageService.downloadAudio(memo.audioStorageKey);
 
-      // Transcribe audio
+      // Transcribe audio with performance tracking
       logger.info({ memoId, size: audioBuffer.length }, 'Transcribing audio');
-      const result = await transcriptionService.transcribeAudio(audioBuffer);
+      const result = await measureTime(
+        'audio-transcription',
+        () => transcriptionService.transcribeAudio(audioBuffer),
+        {
+          memoId,
+          audioSize: audioBuffer.length,
+        }
+      );
 
       // Save transcript to database
       await prisma.transcript.create({

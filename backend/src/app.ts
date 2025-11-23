@@ -8,6 +8,7 @@ import { logger } from './utils/logger.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { memoRoutes } from './routes/memo.routes.js';
+import metricsRoutes from './routes/metrics.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -46,6 +47,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Register routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(memoRoutes, { prefix: '/api/memos' });
+  await app.register(metricsRoutes, { prefix: '/api' });
 
   // Error handler (must be last)
   app.setErrorHandler(errorHandler);
