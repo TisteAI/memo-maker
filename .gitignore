@@ -12,6 +12,11 @@ node_modules/
 coverage/
 .nyc_output/
 
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+
 # Build outputs
 dist/
 build/
